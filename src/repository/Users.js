@@ -25,13 +25,20 @@ export class UsersRepo {
     return Users.findByPk(id, {
       attributes: [
         'id',
-        'name',
+        'firstName',
         'lastName',
         'email',
-        'accessRole',
-        'lastSession',
-        'photoId',
-        'photoUrl',
+        'phone',
+      ],
+      include: [
+        {
+          model: AuthData,
+          as: 'authData',
+          attributes: [
+            'role',
+            'confirmed',
+          ],
+        },
       ],
     });
   }
@@ -52,6 +59,7 @@ export class UsersRepo {
           model: AuthData,
           as: 'authData',
           attributes: [
+            'role',
             'confirmed',
             'password',
             'refreshToken',
@@ -74,6 +82,7 @@ export class UsersRepo {
             model: AuthData,
             as: 'authData',
             attributes: [
+              'role',
               'confirmed',
               'password',
               'refreshToken',
@@ -167,7 +176,6 @@ export class UsersRepo {
         'name',
         'lastName',
         'email',
-        'accessRole',
       ],
     };
 
@@ -240,24 +248,30 @@ export class UsersRepo {
   }
   
   static async confirm(data) {
-    let user = await Users.findOne({
+    let authData = await AuthData.findOne({
       where: {
         confirmationToken: data.token,
-        confirmationExpires: {
-          $gt: Date.now()
-        }
-      }
+      },
+      include: [
+        {
+          model: Users,
+          as: 'user',
+          attributes: [
+            'email',
+          ],
+        },
+      ],
     });
 
-    if (!user) {
+    if (!authData) {
       console.log("Can't get user with specified token.");
-      return
+      return;
     }
 
-    user.confirmationToken = null;
-    user.confirmationExpires = null;
-    user.confirmed = true;
-    return user.save();
+    authData.confirmationToken = null;
+    authData.confirmed = true;
+    await authData.save();
+    return authData.user;
   }
   
   static async updateAuthData(userId, data) {
@@ -275,10 +289,8 @@ export class UsersRepo {
     }
 
     const _authData = pick(data, [
-      'confirmed',
       'password',
       'refreshToken',
-      'confirmationToken',
       'resetToken',
     ]);
     Object.assign(authData, _authData);

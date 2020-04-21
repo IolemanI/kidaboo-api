@@ -31,6 +31,9 @@ const AuthDataModel = db.define('AuthData', {
   resetToken: {
     type: Sequelize.STRING,
   },
+  role: {
+    type: Sequelize.STRING,
+  },
 },
 {
   tableName: 'AuthData',

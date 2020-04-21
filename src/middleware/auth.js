@@ -5,7 +5,7 @@ import {log, LOG_ACCESS_ROLEDENIED} from "../lib/logger";
 
 export async function checkUserAcl(user, resourceName, rule) {
   const dbUser = await UsersRepo.getById(user.id);
-  const role = dbUser.access_role;
+  const role = dbUser.authData.role;
 
   return checkAcl(role, resourceName, rule);
 }
@@ -34,7 +34,7 @@ export function permission(resourceName, rule) {
       ruleText = await rule(ctx);
     }
     if (resourceName && !await checkUserAcl(ctx.state.user, resourceName, ruleText)) {
-      log(LOG_ACCESS_ROLEDENIED, { url: ctx.request.href, role: ctx.state.user.access_role, resourceName, ruleText }, { user_id: ctx.state.user.id });
+      log(LOG_ACCESS_ROLEDENIED, { url: ctx.request.href, role: ctx.state.user.authData.role, resourceName, ruleText }, { user_id: ctx.state.user.id });
       return ctx.forbidden({ message: 'Denied' });
     }
 
@@ -45,7 +45,7 @@ export function permission(resourceName, rule) {
 export function jwtAuth() {
   return async (ctx, next) => {
     ctx.state.checkPermission = (resourceName, rule) => {
-      return checkAcl(ctx.state.user.access_role, resourceName, rule)
+      return checkAcl(ctx.state.user.authData.role, resourceName, rule)
     };
 
     const token = ctx.cookies.get('access_token');
@@ -56,13 +56,12 @@ export function jwtAuth() {
     }
     try {
       let email;
-      // let sudoAccountId;
 
       if (token) {
+        // if session is expired, decodeJwt() returns "sessionExpired": true
         let data = decodeJwt(token);
 
         email = data.email;
-        // sudoAccountId = data.sudoAccountId;
         if (!email) {
           log(LOG_ACCESS_ROLEDENIED, ctx.request.href, 'Invalid jwt token');
           return ctx.unauthorized({ message: 'Invalid jwt token' });
@@ -71,14 +70,6 @@ export function jwtAuth() {
 
       // eslint-disable-next-line require-atomic-updates
       ctx.state.user = await UsersRepo.loginByEmail(email);
-
-      // if (sudoAccountId) {
-      //   ctx.state.realAccount = ctx.state.user;
-      //   ctx.state.user = await UsersRepo.getById(sudoAccountId);
-      //   console.info('ctx.state.user', ctx.state.user);
-      //
-      //   ctx.set('x-account-sudo', `${ctx.state.realAccount.name} ${ctx.state.realAccount.last_name}`);
-      // }
     } catch (err) {
       return ctx.unauthorized({ message: err.message, sessionExpired: true });
     }

@@ -8,6 +8,7 @@ import { UsersRepo } from '../repository/Users';
 import * as validation from '../lib/validation';
 import { generateJwt, decodeJwt } from '../lib/auth';
 import { getRoleAcl } from '../lib/acl'
+import { env } from '../lib/env'
 
 import { log, LOG_LOGIN_FAILED, LOG_LOGIN_SUCCESS, LOG_RECOVER_PASSWORD, LOG_CONFIRM_EMAIL } from '../lib/logger';
 
@@ -44,41 +45,18 @@ class AuthController {
       let account;
       let passed;
 
-      const token = ctx.cookies.get('access_token');
-      if (token) {
-        data = decodeJwt(token);
+      const { error } = validation.validateCreds(ctx.request.body);
 
-        account = await UsersRepo.loginByEmail(data.email);
+      if (error) {
+        return ctx.badRequest(error.details[0].message);
+      }
 
-        if (!account) {
-          log(LOG_LOGIN_FAILED, { email: data.email });
-          return ctx.unauthorized({ message: `User with email ${data.email} not found` })
-        }
-      } else if (!token && !isEmpty(ctx.request.body)) {
-        const { error } = validation.validateCreds(ctx.request.body);
+      data = { email };
+      account = await UsersRepo.loginByEmail(data.email);
 
-        if (error) {
-          return ctx.badRequest(error.details[0].message);
-        }
-        data = {
-          email,
-        };
-        account = await UsersRepo.loginByEmail(data.email);
-
-        if (!account) {
-          log(LOG_LOGIN_FAILED, { email: data.email });
-          return ctx.unauthorized({ message: `User with email ${data.email} not found` })
-        }
-
-        passed = await bcrypt.compare(password, account.authData.password);
-        if (!passed) {
-          log(LOG_LOGIN_FAILED, { email: data.email });
-          return ctx.unauthorized({ message: `Invalid email or password` })
-        }
-        // const session = await UsersRepo.setSession(account.id);
-        // account = Object.assign(account, session);
-      } else {
-        return ctx.noContent();
+      if (!account) {
+        log(LOG_LOGIN_FAILED, { email: data.email });
+        return ctx.unauthorized({ message: `User with email ${data.email} not found` })
       }
 
       if (!account.authData.confirmed) {
@@ -86,14 +64,18 @@ class AuthController {
         return ctx.unauthorized({ message: `Account is not confirmed.` })
       }
 
+      passed = await bcrypt.compare(password, account.authData.password);
+      if (!passed) {
+        log(LOG_LOGIN_FAILED, { email: data.email });
+        return ctx.unauthorized({ message: `Invalid email or password` })
+      }
+
       log(LOG_LOGIN_SUCCESS, { email: data.email });
 
       const user = account.get({ plain: true });
-      user.permissions = getRoleAcl(account.access_role).allow;
+      user.permissions = getRoleAcl(account.authData.role).allow;
 
-      delete user.password;
-      delete user.reset_password_token;
-      delete user.reset_password_expires;
+      delete user.authData.password;
 
       const accessToken = await generateJwt(account);
       ctx.cookies.set('access_token', accessToken, {
@@ -102,15 +84,29 @@ class AuthController {
         expires: new Date(moment().add(1, 'hour').toISOString()),
       });
 
-      const refreshToken = await generateJwt(account, 'refresh');
+      let refreshToken = user.authData.refreshToken;
+
+      if (refreshToken) {
+        try {
+          decodeJwt(refreshToken, 'refresh')
+        } catch (e) {
+          refreshToken = await generateJwt(account, 'refresh');
+          await UsersRepo.updateAuthData(user.id, {
+            refreshToken,
+          });
+        }
+      } else {
+        refreshToken = await generateJwt(account, 'refresh');
+        await UsersRepo.updateAuthData(user.id, {
+          refreshToken,
+        });
+      }
+
       ctx.cookies.set('refresh_token', refreshToken, {
         httpOnly: true,
         sameSite: true,
+        path: `${env.API_PREFIX}/auth`,
         expires: new Date(moment().add(1, 'year').toISOString()),
-      });
-
-      await UsersRepo.updateAuthData(user.id, {
-        refreshToken,
       });
 
       return ctx.ok({
@@ -187,7 +183,7 @@ class AuthController {
     });
   }
 
-  @post("/confirm-email")
+  @post("/confirm")
   async confirmEmail(ctx) {
     const req = ctx.request;
 
@@ -205,9 +201,6 @@ class AuthController {
       ctx.badRequest("Failed to confirm email.");
       return;
     }
-    ctx.ok({
-      id: user.id,
-      email: user.email,
-    });
+    ctx.ok();
   }
 }

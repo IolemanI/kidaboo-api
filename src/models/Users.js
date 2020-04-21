@@ -35,6 +35,6 @@ const UsersModel = db.define('Users', {
 
 
 UsersModel.hasOne(AuthData, { foreignKey: 'UserId', as: 'authData' });
-AuthData.belongsTo(UsersModel, { foreignKey: 'UserId', as: 'authData' });
+AuthData.belongsTo(UsersModel, { foreignKey: 'UserId', as: 'user' });
 
 exports.Users = UsersModel; // eslint-disable-line no-undef
