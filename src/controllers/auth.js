@@ -10,7 +10,7 @@ import { generateJwt, decodeJwt } from '../lib/auth';
 import { getRoleAcl } from '../lib/acl'
 import { env } from '../lib/env'
 
-import { log, LOG_LOGIN_FAILED, LOG_LOGIN_SUCCESS, LOG_RECOVER_PASSWORD, LOG_CONFIRM_EMAIL } from '../lib/logger';
+import { log, LOG_LOGIN_FAILED, LOG_LOGIN_SUCCESS, LOG_RECOVER_PASSWORD, LOG_CONFIRM_EMAIL, LOG_REFRESH_FAILED } from '../lib/logger';
 
 export default @controller("/auth")
 class AuthController {
@@ -78,46 +78,32 @@ class AuthController {
       delete user.authData.password;
 
       const accessToken = await generateJwt(account);
+      // TODO: remove cookies for access_token
       ctx.cookies.set('access_token', accessToken, {
         httpOnly: true,
         sameSite: true,
         expires: new Date(moment().add(1, 'hour').toISOString()),
       });
 
-      let refreshToken = user.authData.refreshToken;
-
-      if (refreshToken) {
-        try {
-          decodeJwt(refreshToken, 'refresh')
-        } catch (e) {
-          refreshToken = await generateJwt(account, 'refresh');
-          await UsersRepo.updateAuthData(user.id, {
-            refreshToken,
-          });
-        }
-      } else {
-        refreshToken = await generateJwt(account, 'refresh');
-        await UsersRepo.updateAuthData(user.id, {
-          refreshToken,
-        });
-      }
-
+      let refreshToken = await generateJwt(account, 'refresh');
       ctx.cookies.set('refresh_token', refreshToken, {
         httpOnly: true,
         sameSite: true,
         path: `${env.API_PREFIX}/auth`,
-        expires: new Date(moment().add(1, 'year').toISOString()),
+        expires: new Date(moment().add(30, 'days').toISOString()),
+      });
+
+      console.log('write new refresh');
+      
+      await UsersRepo.updateAuthData(user.id, {
+        refreshToken,
       });
 
       return ctx.ok({
-        accessToken: accessToken,
-        refreshToken: refreshToken,
+        accessToken,
       })
     } catch (err) {
       console.error(err);
-      if (err.message.indexOf('jwt expired') !== -1) {
-        return ctx.unauthorized({ sessionExpired: true, message: `Session token expired` })
-      }
       ctx.cookies.set('access_token', '', {
         httpOnly: true,
         sameSite: true,
@@ -125,7 +111,64 @@ class AuthController {
       ctx.cookies.set('refresh_token', '', {
         httpOnly: true,
         sameSite: true,
+        path: `${env.API_PREFIX}/auth`,
       });
+
+      if (err.message.indexOf('jwt expired') !== -1) {
+        return ctx.unauthorized({ sessionExpired: true, message: `Session token expired` })
+      }
+      return ctx.badRequest({ message: err.message })
+    }
+  }
+
+  // TODO: update refresh to this: 
+  // https://gist.github.com/zmts/802dc9c3510d79fd40f9dc38a12bccfc
+  @post("/refresh")
+  async refresh(ctx) {
+    try {
+      let account;
+
+      const refreshToken = ctx.cookies.get('refresh_token');
+
+      if (refreshToken) {
+        const data = decodeJwt(refreshToken, 'refresh');
+
+        account = await UsersRepo.loginByEmail(data.email);
+
+        if (!account || refreshToken.localeCompare(account.authData.refreshToken) !== 0) {
+          log(LOG_REFRESH_FAILED, ctx.request.href, 'Invalid Refresh Token');
+          throw new Error('Refresh Token is invalid');
+        }
+      }
+
+      const accessToken = await generateJwt(account);
+      ctx.cookies.set('access_token', accessToken, {
+        httpOnly: true,
+        sameSite: true,
+        expires: new Date(moment().add(1, 'hour').toISOString()),
+      });
+
+      return ctx.ok({
+        accessToken: accessToken,
+      })
+    } catch (err) {
+      ctx.cookies.set('access_token', '', {
+        httpOnly: true,
+        sameSite: true,
+      });
+      ctx.cookies.set('refresh_token', '', {
+        httpOnly: true,
+        sameSite: true,
+        path: `${env.API_PREFIX}/auth`,
+      });
+
+      if (err.message.indexOf('jwt expired') !== -1) {
+        return ctx.unauthorized({ sessionExpired: true, message: `Refresh token expired` })
+      }
+      if (err.message.localeCompare('Refresh Token is invalid') === 0) {
+        return ctx.unauthorized({ sessionExpired: true, message: err.message })
+      }
+
       return ctx.badRequest({ message: err.message })
     }
   }
