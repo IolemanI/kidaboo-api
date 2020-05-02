@@ -9,7 +9,8 @@
     "build": "cross-env NODE_ENV=production babel src -d dist -s",
     "start": "node dist/bin/www.js",
     "test": "jest",
-    "stop": "pkill --signal SIGINT src/bin/www.js"
+    "stop": "pkill --signal SIGINT src/bin/www.js",
+    "heroku-prebuild": "npm install --only=dev"
   },
   "dependencies": {
     "@koa/cors": "^2.2.2",
@@ -55,7 +56,9 @@
     "unzip-stream": "^0.3.0",
     "uuid": "^3.3.3",
     "virgen-acl": "0.0.22",
-    "yenv": "^2.1.0",
+    "yenv": "^2.1.0"
+  },
+  "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.4",
     "@babel/node": "^7.2.2",
@@ -66,9 +69,7 @@
     "@babel/preset-env": "^7.3.4",
     "babel-eslint": "^10.0.3",
     "eslint": "^6.5.1",
-    "eslint-config-strongloop": "^2.1.0"
-  },
-  "devDependencies": {
+    "eslint-config-strongloop": "^2.1.0",
     "jest": "^24.5.0",
     "nodemon": "^1.18.10"
   },
