@@ -150,7 +150,7 @@ export class UsersRepo {
     user = await user.save();
 
     if (!id) {
-      _authData.userId = user.id;
+      _authData.UserId = user.id;
     }
     Object.assign(authData, _authData);
 
