@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 import { controller, get, put, post } from "koa-dec-router";
-import { UsersRepo } from "../repository/users";
+import { UsersRepo } from "../repository/Users";
 import { permission } from "../middleware/auth";
 import { paginationMiddleware } from '../middleware/pagination';
 import fileUploader from '../middleware/file-uploader';

@@ -1,6 +1,6 @@
 import { getAcl } from '../lib/acl';
 import { decodeJwt } from '../lib/auth';
-import { UsersRepo } from '../repository/users';
+import { UsersRepo } from '../repository/Users';
 import {log, LOG_ACCESS_ROLEDENIED} from "../lib/logger";
 
 export async function checkUserAcl(user, resourceName, rule) {
