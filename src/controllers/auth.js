@@ -38,7 +38,10 @@ class AuthController {
 
   @post("/login")
   async login(ctx) {
+    console.log('/login');
+    
     const { email, password } = ctx.request.body;
+    console.log('=>', email, password);
 
     try {
       let data;

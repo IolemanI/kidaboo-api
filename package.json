@@ -78,5 +78,8 @@
     "execMap": {
       "js": "npx babel-node"
     }
+  },
+  "engines": {
+    "node": "12.16.1"
   }
 }
