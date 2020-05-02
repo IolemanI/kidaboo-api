@@ -54,7 +54,7 @@ export async function createServer() {
 
   let server;
 
-  if (process.env.NODE_ENV === 'production') {// eslint-disable-line no-undef
+  if (process.env.NODE_ENV === 'production' && process.env.IS_HEROKU !== 'true') {// eslint-disable-line no-undef
     server = https.createServer({
       key: fs.readFileSync('privkey.pem'),// eslint-disable-line no-undef
       cert: fs.readFileSync('fullchain.pem')// eslint-disable-line no-undef
