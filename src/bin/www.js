@@ -12,9 +12,9 @@ void async function bootstrap() {
 
         const app = await createServer();
 
-        app.listen(env.API_PORT, () => {
+        app.listen(env.PORT, () => {
             const mode = env.NODE_ENV;
-            logger.debug(`Server listening on ${env.API_PORT} in ${mode} mode`)
+            logger.debug(`Server listening on ${env.PORT} in ${mode} mode`)
         });
     } catch (err) {
         console.info(err);
