@@ -33,6 +33,7 @@ const AuthDataModel = db.define('AuthData', {
   },
   role: {
     type: Sequelize.STRING,
+    defaultValue: 'User',
   },
 },
 {

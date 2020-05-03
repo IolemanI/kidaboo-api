@@ -25,7 +25,7 @@ const UsersModel = db.define('Users', {
   },
   phone: {
     type: Sequelize.STRING(50),
-    allowNull: false,
+    allowNull: true,
     required: true,
   },
 },

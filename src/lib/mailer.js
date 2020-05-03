@@ -18,7 +18,13 @@ function initTransport() {
 
     var handlebarsOptions = {
         viewEngine: 'handlebars',
-        viewPath: path.join(__dirname, 'templates'),
+        viewEngine: {
+            extName: '.html',
+            partialsDir: path.join(__dirname, 'src', 'templates'),
+            layoutsDir: path.join(__dirname, 'src', 'templates'),
+            defaultLayout: '',
+        },
+        viewPath: path.join(__dirname, 'src', 'templates'),
         extName: '.html'
     };
 

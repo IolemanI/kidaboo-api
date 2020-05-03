@@ -112,7 +112,7 @@ export class UsersRepo {
     let exist = await Users.find({ where: { email: preparedUserEmail } });
     if (exist && exist.id !== user.id) {
       const error = new Error()
-      error.message = `User with this email already exists.`;
+      error.message = `Такой пользователь уже существует.`;
       error.type = error.name = 'RequestValidationError';
       throw error;
     }
@@ -121,7 +121,6 @@ export class UsersRepo {
       'firstName',
       'lastName',
       'email',
-      'phone',
     ]);
     const _authData = pick(body, [
       'password',
@@ -136,7 +135,7 @@ export class UsersRepo {
         _authData.oldPassword = undefined;
       } else {
         const error = new Error();
-        error.message = `Wrong password.`;
+        error.message = `Неправильный пароль.`;
         error.type = error.name = 'RequestValidationError';
         throw error;
       }
@@ -156,15 +155,17 @@ export class UsersRepo {
 
     authData = await authData.save();
 
-    // if (!id) {
-    //   log(LOG_REG_SEND_EMAIL, { email: user.email });
-    //   sendEmail({
-    //     userName: user.name,
-    //     email: user.email,
-    //     url: `/confirm?token=${user.confirmation_token}`,
-    //     subject: 'Welcome to useheard.com!'
-    //   }, EMAIL_CONFIRMATION_TEMPLATE);
-    // }
+    console.log('authData', authData);
+    
+    if (!id) {
+      log(LOG_REG_SEND_EMAIL, { email: user.email });
+      sendEmail({
+        userName: user.name,
+        email: user.email,
+        url: `/confirm?token=${authData.confirmationToken}`,
+        subject: 'Добро пожаловать в Kidaboo!'
+      }, EMAIL_CONFIRMATION_TEMPLATE);
+    }
     return user;
   }
 
@@ -264,7 +265,7 @@ export class UsersRepo {
     });
 
     if (!authData) {
-      console.log("Can't get user with specified token.");
+      console.log("Не удается получить пользователя с указанным токеном.");
       return;
     }
 

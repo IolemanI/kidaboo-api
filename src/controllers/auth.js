@@ -27,7 +27,7 @@ class AuthController {
     let user = await UsersRepo.save(req.body);
 
     if (typeof user === 'undefined') {
-      ctx.badRequest("Failed to save user.");
+      ctx.badRequest("Не удалоь сохранить пользователя.");
       return;
     }
     ctx.status = HttpStatus.CREATED;
@@ -41,7 +41,6 @@ class AuthController {
     console.log('/login');
     
     const { email, password } = ctx.request.body;
-    console.log('=>', email, password);
 
     try {
       let data;
@@ -59,18 +58,18 @@ class AuthController {
 
       if (!account) {
         log(LOG_LOGIN_FAILED, { email: data.email });
-        return ctx.unauthorized({ message: `User with email ${data.email} not found` })
+        return ctx.unauthorized({ message: `Пользователь с email ${data.email} не найден` })
       }
 
       if (!account.authData.confirmed) {
         log(LOG_LOGIN_FAILED, { email: data.email });
-        return ctx.unauthorized({ message: `Account is not confirmed.` })
+        return ctx.unauthorized({ message: `Аккаунт не подтвержден.` })
       }
 
       passed = await bcrypt.compare(password, account.authData.password);
       if (!passed) {
         log(LOG_LOGIN_FAILED, { email: data.email });
-        return ctx.unauthorized({ message: `Invalid email or password` })
+        return ctx.unauthorized({ message: `Неправильный email или пароль.` })
       }
 
       log(LOG_LOGIN_SUCCESS, { email: data.email });
@@ -96,8 +95,6 @@ class AuthController {
         expires: new Date(moment().add(30, 'days').toISOString()),
       });
 
-      console.log('write new refresh');
-      
       await UsersRepo.updateAuthData(user.id, {
         refreshToken,
       });
@@ -118,7 +115,7 @@ class AuthController {
       });
 
       if (err.message.indexOf('jwt expired') !== -1) {
-        return ctx.unauthorized({ sessionExpired: true, message: `Session token expired` })
+        return ctx.unauthorized({ sessionExpired: true, message: `Сессия истекла.` })
       }
       return ctx.badRequest({ message: err.message })
     }
@@ -241,12 +238,12 @@ class AuthController {
 
     let user = await UsersRepo.confirm(req.body);
 
-    log(LOG_CONFIRM_EMAIL, { email: user.email, token: req.body.token });
-
     if (!user) {
       ctx.badRequest("Failed to confirm email.");
       return;
     }
+    log(LOG_CONFIRM_EMAIL, { email: user.email, token: req.body.token });
+
     ctx.ok();
   }
 }

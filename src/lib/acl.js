@@ -15,9 +15,9 @@ export function getAcl() {
   return acl;
 }
 
-const ROLE_SUPER_ADMIN = 'Super Admin';
-const ROLE_ADMIN = 'Admin';
-const ROLE_USER = 'User';
+export const ROLE_SUPER_ADMIN = 'Super Admin';
+export const ROLE_ADMIN = 'Admin';
+export const ROLE_USER = 'User';
 
 const ACL = {
   [ROLE_USER]: {
