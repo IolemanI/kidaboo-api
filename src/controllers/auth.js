@@ -83,14 +83,14 @@ class AuthController {
       // TODO: remove cookies for access_token
       ctx.cookies.set('access_token', accessToken, {
         httpOnly: true,
-        sameSite: true,
+        // sameSite: true,
         expires: new Date(moment().add(1, 'hour').toISOString()),
       });
 
       let refreshToken = await generateJwt(account, 'refresh');
       ctx.cookies.set('refresh_token', refreshToken, {
         httpOnly: true,
-        sameSite: true,
+        // sameSite: true,
         path: `${env.API_PREFIX}/auth`,
         expires: new Date(moment().add(30, 'days').toISOString()),
       });
