@@ -1,7 +1,6 @@
 import { controller, post } from 'koa-dec-router';
 import bcrypt from 'bcrypt';
 import moment from 'moment';
-import isEmpty from 'lodash/isEmpty';
 import * as HttpStatus from 'http-status-codes';
 
 import { UsersRepo } from '../repository/Users';
@@ -80,17 +79,18 @@ class AuthController {
       delete user.authData.password;
 
       const accessToken = await generateJwt(account);
+      const accessTokenExpires = new Date(moment().add(1, 'hour').toISOString());
       // TODO: remove cookies for access_token
       ctx.cookies.set('access_token', accessToken, {
         httpOnly: true,
-        // sameSite: true,
-        expires: new Date(moment().add(1, 'hour').toISOString()),
+        sameSite: !env.IS_HEROKU,
+        expires: accessTokenExpires,
       });
 
       let refreshToken = await generateJwt(account, 'refresh');
       ctx.cookies.set('refresh_token', refreshToken, {
         httpOnly: true,
-        // sameSite: true,
+        sameSite: !env.IS_HEROKU,
         path: `${env.API_PREFIX}/auth`,
         expires: new Date(moment().add(30, 'days').toISOString()),
       });
@@ -101,16 +101,17 @@ class AuthController {
 
       return ctx.ok({
         accessToken,
+        expires: accessTokenExpires,
       })
     } catch (err) {
       console.error(err);
       ctx.cookies.set('access_token', '', {
         httpOnly: true,
-        sameSite: true,
+        sameSite: env.IS_HEROKU !== 'true',
       });
       ctx.cookies.set('refresh_token', '', {
         httpOnly: true,
-        sameSite: true,
+        sameSite: env.IS_HEROKU !== 'true',
         path: `${env.API_PREFIX}/auth`,
       });
 

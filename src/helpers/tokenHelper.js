@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from "crypto";
 import { env } from '../lib/env';
 
+// used for confirmation token
 export function generateToken() {
   let token = crypto.randomBytes(20).toString('hex');
 

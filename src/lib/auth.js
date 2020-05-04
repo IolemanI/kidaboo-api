@@ -4,8 +4,7 @@ import { env } from './env';
 export function generateJwt(user, type = 'access') {
   let secret = env.JWT_ACCESS_SECRET;
   const options = {
-    // expiresIn: '30m'
-    expiresIn: '30s'
+    expiresIn: '1h'
   };
   if (type === 'refresh') {
     secret = env.JWT_REFRESH_SECRET;
